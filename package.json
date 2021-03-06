@@ -1,0 +1,22 @@
+{
+  "name": "utils",
+  "version": "1.0.0",
+  "description": "个人工具库",
+  "main": "index.js",
+  "scripts": {
+    "test": "promises-aplus-tests js/promise/promise"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jappp/utils.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jappp/utils/issues"
+  },
+  "homepage": "https://github.com/jappp/utils#readme",
+  "devDependencies": {
+    "promises-aplus-tests": "^2.1.2"
+  }
+}
