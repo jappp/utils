@@ -136,16 +136,160 @@ class MyPromise {
 
     return promise2;
   }
+
+  static resolve(value) {
+    // 根据规范, 如果参数是Promise实例, 直接return这个实例
+    if(value instanceof MyPromise) return value;
+    return new MyPromise((resolve, reject) => {
+      resolve(value);
+    })
+  }
+
+  static reject(reason) {
+    return new MyPromise((resolve, reject) => {
+      reject(reason);
+    })
+  }
+
+  static all(promiseArr) {
+    if (!Array.isArray(promiseArr)) {
+      const type = typeof promiseArr;
+      return new TypeError(`TypeError: ${type} ${values} is not iterable`)
+    }
+
+    return new MyPromise((resolve, reject) => {
+      let counts = 0;
+      let result = [];
+      let len = promiseArr.length;
+
+      for (let i = 0; i < len; i++) {
+        let instance = promiseArr[i];
+
+        // Promise.resolve(p)用于处理传入值不为Promise的情况
+        MyPromise.resolve(instance).then(val => {
+          counts++;
+          result[i] = val;
+          if (counts === len) {
+            resolve(result);
+          }
+        }, err => {
+          reject(err);
+        })
+      }
+    })
+  }
+
+  static race(promiseArr) {
+    return new MyPromise((resolve, reject) => {
+      for (let i = 0; i < promiseArr.length; i++) {
+        let instance = promiseArr[i];
+        Promise.resolve(instance).then(resolve, reject)
+      }
+    })
+  }
+
+  static allSettled(promiseArr) {
+    if (!Array.isArray(promiseArr)) {
+      const type = typeof promiseArr;
+      return new TypeError(`TypeError: ${type} ${values} is not iterable`)
+    }
+
+    return new MyPromise((resolve, reject) => {
+      let counts = 0;
+      let result = [];
+      let len = promiseArr.length;
+
+      for (let i = 0; i < len; i++) {
+        let instance = promiseArr[i];
+
+        // Promise.resolve(p)用于处理传入值不为Promise的情况
+        MyPromise.resolve(instance).then(res => {
+          counts++;
+          result.push({ status: "fulfilled", value: res });
+          if (counts === len) {
+            resolve(result);
+          }
+        }, err => {
+          counts++;
+          result.push({ status: "rejected", value: err });
+          if (counts === len) {
+            resolve(result);
+          }
+        })
+      }
+    })
+  }
+
+  static any(promiseArr) {
+    if (!Array.isArray(promiseArr)) {
+      const type = typeof promiseArr;
+      return new TypeError(`TypeError: ${type} ${values} is not iterable`)
+    }
+
+    return new MyPromise((resolve, reject) => {
+      let hasOneResolved = false;
+      let counts = 0;
+      let len = promiseArr.length;
+
+      for (let i = 0; i < len; i++) {
+        let instance = promiseArr[i];
+
+        // Promise.resolve(p)用于处理传入值不为Promise的情况
+        MyPromise.resolve(instance).then(res => {
+          if (hasOneResolved) return;
+          hasOneResolved = true;
+          resolve(res);
+        }, err => {
+          counts++;
+          if (counts === len) {
+            reject('AggregateError: All promises were rejected');
+          }
+        })
+      }
+    })
+  }
 }
 
-MyPromise.defer = MyPromise.deferred = function() {
-  var result = {};
-  result.promise = new MyPromise(function(resolve, reject){
-    result.resolve = resolve;
-    result.reject = reject;
-  });
-
-  return result;
+MyPromise.prototype.catch = function(onRejected){
+  return this.then(null, onRejected);
 }
 
-module.exports = MyPromise;
+MyPromise.prototype.finally = function(callback){
+  return this.then((value) => {
+    return MyPromise.resolve(callback()).then(() => value);
+  }, (reason) => {
+    return MyPromise.resolve(callback()).then(() => { throw reason })
+  })
+}
+
+// 包装想要控制中断的promise, 提供一个abort方法外部调用中断promise
+function promiseAbort(promise) {
+  let abort = null;
+  let abortPromise = new Promise((resolve, reject) => {
+    abort = reject;
+  })
+  let p = Promise.race([promise, abortPromise]);
+  p.abort = abort;
+  return p;
+}
+
+function promiseTimeout(promise, time = 5000) {
+  let abortPromise = new Promise((resolve, reject) => {
+    setTimeout(() => {
+      reject('timeout');
+    }, time);
+  })
+  return Promise.race([promise, abortPromise]);
+}
+
+// MyPromise.defer = MyPromise.deferred = function() {
+//   var result = {};
+//   result.promise = new MyPromise(function(resolve, reject){
+//     result.resolve = resolve;
+//     result.reject = reject;
+//   });
+
+//   return result;
+// }
+
+// module.exports = MyPromise;
