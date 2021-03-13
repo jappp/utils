@@ -1,5 +1,23 @@
-/* wait 时间内，可以重新生成定时器，但只要 wait 的时间到了，必须给用户一个响应 */
 function throttle(fn, wait) {
+  let previous = 0;
+
+  return function(...args) {
+    let now = +new Date();
+
+    // 触发间隔大于设定时间，直接执行
+    if (now - previous > wait) {
+      previous = now;
+      fn.apply(this, args);
+    }
+  }
+}
+
+
+/**
+ * 节流优化
+ *  wait 时间内，可以重新生成定时器，但只要 wait 的时间到了，必须给用户一个响应
+ */
+function throttle2(fn, wait) {
   let previous = 0;
   let timer = null;
 
